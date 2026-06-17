@@ -8,6 +8,15 @@ const notFound = (req, res, next) => {
 const errorHandler = (err, req, res, next) => {
   console.error("🔥 GLOBAL ERROR:", err);
 
+  // CORS error
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      success: false,
+      message: 'Origin not allowed by CORS policy',
+      code: 'CORS_ERROR',
+    });
+  }
+
   // Multer error
   if (err?.name === 'MulterError') {
     return res.status(400).json({
