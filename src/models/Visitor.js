@@ -1,14 +1,12 @@
 /**
  * Visitor Model
- * Represents visitors to the facility
+ * Clean & Production Safe Version (Fixed)
  */
 
 const mongoose = require('mongoose');
 
 const visitorSchema = new mongoose.Schema(
   {
-    // ================= PERSONAL INFORMATION =================
-
     firstName: {
       type: String,
       required: [true, 'First name is required'],
@@ -24,22 +22,20 @@ const visitorSchema = new mongoose.Schema(
     email: {
       type: String,
       lowercase: true,
-      match: [
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        'Please provide a valid email address',
-      ],
+      trim: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email address'],
     },
 
     phoneNumber: {
       type: String,
       required: [true, 'Phone number is required'],
+      trim: true,
       match: [/^[0-9]{10}$/, 'Phone number must be 10 digits'],
     },
 
-    // ================= DOCUMENT INFORMATION =================
-
     aadhaarNumber: {
       type: String,
+      trim: true,
       match: [/^[0-9]{12}$/, 'Aadhaar number must be 12 digits'],
     },
 
@@ -55,7 +51,28 @@ const visitorSchema = new mongoose.Schema(
       gender: String,
     },
 
-    // ================= MEDIA FILES =================
+    visitPurpose: {
+      type: String,
+      required: [true, 'Visit purpose is required'],
+      enum: ['business_meeting', 'delivery', 'service', 'interview', 'inspection', 'other'],
+    },
+
+    departmentToVisit: {
+      type: String,
+      required: [true, 'Department is required'],
+      trim: true,
+    },
+
+    personToMeet: {
+      type: String,
+      required: [true, 'Person to meet is required'],
+      trim: true,
+    },
+
+    company: {
+      type: String,
+      trim: true,
+    },
 
     profilePhoto: {
       type: String,
@@ -66,33 +83,6 @@ const visitorSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-
-    // ================= VISIT INFORMATION =================
-
-    visitPurpose: {
-      type: String,
-      required: [true, 'Visit purpose is required'],
-      enum: [
-        'business_meeting',
-        'delivery',
-        'service',
-        'interview',
-        'inspection',
-        'other',
-      ],
-    },
-
-    departmentToVisit: {
-      type: String,
-      required: [true, 'Department is required'],
-    },
-
-    personToMeet: {
-      type: String,
-      required: [true, 'Person to meet is required'],
-    },
-
-    // ================= QR CODE INFORMATION =================
 
     qrCode: {
       type: String,
@@ -108,8 +98,6 @@ const visitorSchema = new mongoose.Schema(
     qrExpiresAt: {
       type: Date,
     },
-
-    // ================= APPROVAL STATUS =================
 
     approvalStatus: {
       type: String,
@@ -128,8 +116,6 @@ const visitorSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ================= VISIT DURATION =================
-
     checkInTime: {
       type: Date,
       default: null,
@@ -145,17 +131,8 @@ const visitorSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ================= DEVICE INFORMATION =================
-
-    deviceId: {
-      type: String,
-    },
-
-    ipAddress: {
-      type: String,
-    },
-
-    // ================= STATUS =================
+    deviceId: String,
+    ipAddress: String,
 
     isActive: {
       type: Boolean,
@@ -168,29 +145,19 @@ const visitorSchema = new mongoose.Schema(
       default: 'registered',
     },
 
-    // ================= OTP VERIFICATION =================
-
     otpVerified: {
       type: Boolean,
       default: false,
     },
 
-    otpVerifiedAt: {
-      type: Date,
-    },
-
-    // ================= EMERGENCY CONTACT =================
+    otpVerifiedAt: Date,
 
     emergencyContact: {
       name: String,
       phoneNumber: String,
     },
 
-    // ================= NOTES =================
-
-    adminNotes: {
-      type: String,
-    },
+    adminNotes: String,
   },
   {
     timestamps: true,
@@ -198,19 +165,20 @@ const visitorSchema = new mongoose.Schema(
 );
 
 /**
- * Calculate visit duration
+ * Auto calculate visit duration (backup logic)
  */
-visitorSchema.methods.calculateVisitDuration = function () {
+visitorSchema.pre('save', function () {
+  try {
+    if (this.checkInTime && this.checkOutTime) {
+      const diff =
+        (this.checkOutTime - this.checkInTime) / (1000 * 60);
 
-  if (this.checkInTime && this.checkOutTime) {
-
-    const duration =
-      (this.checkOutTime - this.checkInTime) / (1000 * 60);
-
-    this.visitDuration = Math.round(duration);
-
+      this.visitDuration = Math.round(diff);
+    }
+  } catch (err) {
+    console.error('Visitor pre-save error:', err);
   }
-};
+});
 
 /**
  * Get full name
@@ -220,39 +188,30 @@ visitorSchema.methods.getFullName = function () {
 };
 
 /**
- * Check if QR expired
+ * QR expiry check
  */
 visitorSchema.methods.isQRExpired = function () {
-
   if (!this.qrExpiresAt) return false;
-
   return new Date() > this.qrExpiresAt;
 };
 
 /**
- * Pre-save hook
+ * ✅ FIX: This was missing (causing your error)
  */
-visitorSchema.pre('save', function (next) {
+visitorSchema.methods.calculateVisitDuration = function () {
+  if (this.checkInTime && this.checkOutTime) {
+    const diff =
+      (this.checkOutTime - this.checkInTime) / (1000 * 60);
 
-  this.calculateVisitDuration();
+    this.visitDuration = Math.round(diff);
+  }
+};
 
-  next();
-
-});
-
-// ================= INDEXES =================
-
-visitorSchema.index({ aadhaarNumber: 1 });
-
+// Indexes
 visitorSchema.index({ phoneNumber: 1 });
- 
-
+visitorSchema.index({ aadhaarNumber: 1 });
 visitorSchema.index({ createdAt: -1 });
-
 visitorSchema.index({ approvalStatus: 1 });
-
 visitorSchema.index({ visitorStatus: 1 });
-
-// ================= EXPORT =================
 
 module.exports = mongoose.model('Visitor', visitorSchema);

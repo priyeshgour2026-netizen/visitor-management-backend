@@ -14,7 +14,13 @@ const { sendAnomalyAlert } = require('../services/notificationService');
  */
 const checkIn = async (req, res) => {
   try {
-    const { qrUniqueId, gate, deviceId } = req.body;
+   
+    console.log('🔥 CHECK-IN STARTED');
+    console.log('BODY:', req.body);
+    console.log('USER:', req.user);
+  const qrUniqueId = req.body.qrUniqueId;
+const gate = req.body.gate || req.body.gateNumber;
+const deviceId = req.body.deviceId;
 
     // Validate inputs
     if (!qrUniqueId || !gate) {
@@ -75,7 +81,7 @@ const checkIn = async (req, res) => {
       visitor: visitor._id,
       qrUniqueId,
       entryTime: new Date(),
-      entryScannedBy: req.user.id,
+      entryScannedBy: req.user?.id || null,
       entryGate: gate,
       entryDeviceId: deviceId,
       status: 'checked_in',
@@ -117,6 +123,12 @@ const checkIn = async (req, res) => {
     );
   } catch (error) {
     console.error('Check-in error:', error);
+     console.error('\n====================');
+  console.error('CHECK-IN ERROR');
+  console.error('Message:', error.message);
+  console.error('Stack:', error.stack);
+  console.error('Full Error:', error);
+  console.error('====================\n');
     sendErrorResponse(res, error.message, 500, 'SERVER_ERROR');
   }
 };
@@ -127,7 +139,9 @@ const checkIn = async (req, res) => {
  */
 const checkOut = async (req, res) => {
   try {
-    const { qrUniqueId, gate, deviceId } = req.body;
+ const qrUniqueId = req.body.qrUniqueId;
+const gate = req.body.gate || req.body.gateNumber;
+const deviceId = req.body.deviceId;
 
     // Validate inputs
     if (!qrUniqueId || !gate) {
@@ -156,7 +170,7 @@ const checkOut = async (req, res) => {
 
     // Update entry log
     entryLog.exitTime = new Date();
-    entryLog.exitScannedBy = req.user.id;
+  entryLog.exitScannedBy = req.user?.id || null;
     entryLog.exitGate = gate;
     entryLog.exitDeviceId = deviceId;
     entryLog.calculateDuration();
@@ -288,9 +302,89 @@ const getEntryStats = async (req, res) => {
   }
 };
 
+
+/**
+ * GET /api/entry/live-monitoring
+ * Get all visitors currently inside premises
+ */
+const getLiveMonitoring = async (req, res) => {
+  try {
+    const activeEntries = await EntryLog.find({
+      status: 'checked_in',
+    })
+      .populate('visitor')
+      .sort({ entryTime: -1 });
+
+    const visitors = activeEntries.map((entry) => {
+      const minutesInside = Math.floor(
+        (Date.now() - new Date(entry.entryTime)) /
+        (1000 * 60)
+      );
+
+      return {
+        entryLogId: entry._id,
+        visitorId: entry.visitor?._id,
+
+        visitorName: entry.visitor
+          ? `${entry.visitor.firstName} ${entry.visitor.lastName}`
+          : 'Unknown',
+
+        phoneNumber: entry.visitor?.phoneNumber || '',
+
+        purpose:
+          entry.visitor?.visitPurpose ||
+          entry.visitorSnapshot?.visitPurpose ||
+          '',
+
+        department:
+          entry.visitor?.departmentToVisit ||
+          entry.visitorSnapshot?.departmentToVisit ||
+          '',
+
+        personToMeet:
+          entry.visitor?.personToMeet || '',
+
+        entryGate: entry.entryGate,
+
+        entryTime: entry.entryTime,
+
+        minutesInside,
+
+        durationFormatted: `${Math.floor(
+          minutesInside / 60
+        )}h ${minutesInside % 60}m`,
+
+        status: entry.status,
+
+        qrUniqueId: entry.qrUniqueId,
+      };
+    });
+
+    return sendSuccessResponse(
+      res,
+      {
+        activeVisitors: visitors.length,
+        visitors,
+      },
+      'Live monitoring data retrieved',
+      200
+    );
+  } catch (error) {
+    console.error('Live monitoring error:', error);
+
+    return sendErrorResponse(
+      res,
+      error.message,
+      500,
+      'SERVER_ERROR'
+    );
+  }
+};
+
 module.exports = {
   checkIn,
   checkOut,
   getEntryLogs,
   getEntryStats,
+  getLiveMonitoring,
 };

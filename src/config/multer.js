@@ -64,6 +64,24 @@ const documentFilter = (req, file, cb) => {
 };
 
 /**
+ * File filter for Aadhaar PDF (strict - PDF only)
+ */
+const aadhaarPdfFilter = (req, file, cb) => {
+  // Only allow PDF files
+  if (file.mimetype === 'application/pdf') {
+    // Validate file extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file extension. Only .pdf files are allowed for Aadhaar.'));
+    }
+  } else {
+    cb(new Error('Invalid file format. Only PDF files are allowed for Aadhaar extraction.'));
+  }
+};
+
+/**
  * File filter for images (Profile pictures, selfies)
  */
 const imageFilter = (req, file, cb) => {
@@ -81,7 +99,18 @@ const imageFilter = (req, file, cb) => {
 };
 
 /**
- * Multer instance for Aadhaar uploads (max 5MB)
+ * Multer instance for Aadhaar PDF uploads (PDF only, max 5MB)
+ */
+const uploadAadhaarPDF = multer({
+  storage: aadhaarStorage,
+  fileFilter: aadhaarPdfFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+});
+
+/**
+ * Multer instance for Aadhaar uploads (all document types)
  */
 const uploadAadhaar = multer({
   storage: aadhaarStorage,
@@ -103,6 +132,7 @@ const uploadProfile = multer({
 });
 
 module.exports = {
+  uploadAadhaarPDF,
   uploadAadhaar,
   uploadProfile,
 };

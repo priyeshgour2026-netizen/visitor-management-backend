@@ -27,7 +27,7 @@ const entryLogSchema = new mongoose.Schema(
     entryScannedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
     },
     entryGate: {
       type: String,
@@ -121,11 +121,10 @@ entryLogSchema.methods.calculateDuration = function () {
 /**
  * Pre-save hook to calculate duration
  */
-entryLogSchema.pre('save', function (next) {
+entryLogSchema.pre('save', function () {
   if (this.exitTime && !this.totalDuration) {
     this.calculateDuration();
   }
-  next();
 });
 
 // Indexes for better query performance

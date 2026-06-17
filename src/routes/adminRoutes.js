@@ -5,13 +5,16 @@
 
 const express = require('express');
 const router = express.Router();
+
 const {
   getDashboard,
   getAllVisitors,
+  getVisitorById,
   approveVisitor,
   rejectVisitor,
   getDailyReport,
 } = require('../controllers/adminController');
+
 const { authenticateJWT } = require('../middleware/auth');
 const { isAdmin } = require('../middleware/authorization');
 
@@ -20,34 +23,71 @@ const { isAdmin } = require('../middleware/authorization');
  * Get admin dashboard with analytics
  * Protected: Admin only
  */
-router.get('/dashboard', authenticateJWT, isAdmin, getDashboard);
+router.get(
+  '/dashboard',
+  authenticateJWT,
+  isAdmin,
+  getDashboard
+);
 
 /**
  * GET /api/admin/visitors
  * Get all visitors with filtering
  * Protected: Admin only
  */
-router.get('/visitors', authenticateJWT, isAdmin, getAllVisitors);
+router.get(
+  '/visitors',
+  authenticateJWT,
+  isAdmin,
+  getAllVisitors
+);
+
+/**
+ * GET /api/admin/visitors/:id
+ * Get single visitor
+ * Protected: Admin only
+ */
+router.get(
+  '/visitors/:id',
+  authenticateJWT,
+  isAdmin,
+  getVisitorById
+);
 
 /**
  * PUT /api/admin/approve/:id
  * Approve visitor registration
  * Protected: Admin only
  */
-router.put('/approve/:id', authenticateJWT, isAdmin, approveVisitor);
+router.put(
+  '/approve/:id',
+  authenticateJWT,
+  isAdmin,
+  approveVisitor
+);
 
 /**
  * PUT /api/admin/reject/:id
  * Reject visitor registration
  * Protected: Admin only
  */
-router.put('/reject/:id', authenticateJWT, isAdmin, rejectVisitor);
+router.put(
+  '/reject/:id',
+  authenticateJWT,
+  isAdmin,
+  rejectVisitor
+);
 
 /**
  * GET /api/admin/reports/daily
  * Get daily report
  * Protected: Admin only
  */
-router.get('/reports/daily', authenticateJWT, isAdmin, getDailyReport);
+router.get(
+  '/reports/daily',
+  authenticateJWT,
+  isAdmin,
+  getDailyReport
+);
 
 module.exports = router;

@@ -15,40 +15,35 @@ exports.getDashboard = async (req, res) => {
 
                     total: { $sum: 1 },
 
-                    pending: {
-                        $sum: {
-                            $cond: [
-                                {
-                                    $or: [
-                                        { $eq: ['$status', 'pending'] },
-                                        { $eq: ['$status', null] }
-                                    ]
-                                },
-                                1,
-                                0
-                            ]
-                        }
-                    },
+                   pending: {
+  $sum: {
+    $cond: [
+      { $eq: ['$approvalStatus', 'pending'] },
+      1,
+      0
+    ]
+  }
+},
 
-                    approved: {
-                        $sum: {
-                            $cond: [
-                                { $eq: ['$status', 'approved'] },
-                                1,
-                                0
-                            ]
-                        }
-                    },
+approved: {
+  $sum: {
+    $cond: [
+      { $eq: ['$approvalStatus', 'approved'] },
+      1,
+      0
+    ]
+  }
+},
 
-                    rejected: {
-                        $sum: {
-                            $cond: [
-                                { $eq: ['$status', 'rejected'] },
-                                1,
-                                0
-                            ]
-                        }
-                    }
+rejected: {
+  $sum: {
+    $cond: [
+      { $eq: ['$approvalStatus', 'rejected'] },
+      1,
+      0
+    ]
+  }
+}
                 }
             }
         ]);
@@ -178,20 +173,21 @@ exports.getAllVisitors = async (req, res) => {
 };
 
 /**
- * APPROVE VISITOR
+ * GET SINGLE VISITOR
  */
-exports.approveVisitor = async (req, res) => {
+exports.getVisitorById = async (req, res) => {
     try {
 
-        const visitor = await Visitor.findByIdAndUpdate(
-            req.params.id,
-            {
-                status: 'approved'
-            },
-            {
-                new: true
-            }
+        const visitor = await Visitor.findById(
+            req.params.id
         );
+
+        if (!visitor) {
+            return res.status(404).json({
+                success: false,
+                message: 'Visitor not found'
+            });
+        }
 
         res.json({
             success: true,
@@ -209,37 +205,53 @@ exports.approveVisitor = async (req, res) => {
 };
 
 /**
+ * APPROVE VISITOR
+ */
+exports.approveVisitor = async (req, res) => {
+  try {
+    const visitor = await Visitor.findByIdAndUpdate(
+      req.params.id,
+      {
+        approvalStatus: 'approved'
+      },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      visitor
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+/**
  * REJECT VISITOR
  */
 exports.rejectVisitor = async (req, res) => {
-    try {
+  try {
+    const visitor = await Visitor.findByIdAndUpdate(
+      req.params.id,
+      {
+        approvalStatus: 'rejected',
+        rejectionReason: req.body.reason
+      },
+      { new: true }
+    );
 
-        const { reason } = req.body;
-
-        const visitor = await Visitor.findByIdAndUpdate(
-            req.params.id,
-            {
-                status: 'rejected',
-                rejectionReason: reason
-            },
-            {
-                new: true
-            }
-        );
-
-        res.json({
-            success: true,
-            visitor
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-
-    }
+    res.json({
+      success: true,
+      visitor
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
 };
 
 /**
