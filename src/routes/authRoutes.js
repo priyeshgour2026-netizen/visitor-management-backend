@@ -1,45 +1,37 @@
 /**
  * Authentication Routes
- * Routes for OTP, login, and token management
+ * Routes for login and token management
  */
 
 const express = require('express');
 const router = express.Router();
+
 const {
   sendOTP,
   verifyOTPAndGenerateToken,
   login,
+  visitorLogin,
   refreshAccessToken,
   logout,
 } = require('../controllers/authController');
 
 /**
- * POST /api/auth/send-otp
- * Send OTP to phone number
+ * Visitor Login
  */
-router.post('/send-otp', sendOTP);
+router.post('/visitor-login', visitorLogin);
 
 /**
- * POST /api/auth/verify-otp
- * Verify OTP and get JWT token
- */
-router.post('/verify-otp', verifyOTPAndGenerateToken);
-
-/**
- * POST /api/auth/login
- * Admin/Staff login
+ * Admin/Staff Login
  */
 router.post('/login', login);
 
 /**
- * POST /api/auth/refresh-token
- * Refresh JWT token
+ * Refresh Token
  */
 router.post('/refresh-token', refreshAccessToken);
 
 /**
- * POST /api/auth/logout
- * Logout user
+ * Logout
  */
 router.post('/logout', logout);
 

@@ -568,10 +568,95 @@ const logout = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/auth/visitor-login
+ * Visitor Login using Phone Number
+ */
+const visitorLogin = async (req, res) => {
+  try {
+
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return sendErrorResponse(
+        res,
+        'Phone number is required',
+        400,
+        'VALIDATION_ERROR'
+      );
+    }
+
+    const visitor = await Visitor.findOne({
+      phoneNumber
+    });
+
+    if (!visitor) {
+      return sendErrorResponse(
+        res,
+        'Visitor not found',
+        404,
+        'VISITOR_NOT_FOUND'
+      );
+    }
+
+    if (visitor.approvalStatus !== 'approved') {
+      return sendErrorResponse(
+        res,
+        'Visitor is not approved yet',
+        403,
+        'VISITOR_NOT_APPROVED'
+      );
+    }
+
+    const token = generateToken({
+      id: visitor._id,
+      phoneNumber: visitor.phoneNumber,
+      type: 'visitor'
+    });
+
+    const refreshToken = generateRefreshToken({
+      id: visitor._id,
+      phoneNumber: visitor.phoneNumber,
+      type: 'visitor'
+    });
+
+    return sendSuccessResponse(
+      res,
+      {
+        token,
+        refreshToken,
+
+        visitor: {
+          _id: visitor._id,
+          firstName: visitor.firstName,
+          lastName: visitor.lastName,
+          phoneNumber: visitor.phoneNumber,
+          approvalStatus: visitor.approvalStatus,
+        }
+      },
+      'Login successful',
+      200
+    );
+
+  } catch (error) {
+
+    console.error('Visitor login error:', error);
+
+    return sendErrorResponse(
+      res,
+      error.message,
+      500,
+      'SERVER_ERROR'
+    );
+
+  }
+};
+
 module.exports = {
   sendOTP,
   verifyOTPAndGenerateToken,
   login,
+  visitorLogin,
   refreshAccessToken,
   logout,
 };
